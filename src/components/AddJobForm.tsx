@@ -1,7 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { X, Loader2, Briefcase, Building, Link, CheckCircle } from 'lucide-react';
 import { JobStatus, Job } from '@/types/job';
+
+// Professional Zod validation schema
+const jobSchema = z.object({
+  title: z.string()
+    .min(1, 'Job title is required')
+    .max(100, 'Job title must be less than 100 characters')
+    .regex(/^[a-zA-Z0-9\s\-\.]+$/, 'Job title contains invalid characters'),
+  company: z.string()
+    .min(1, 'Company name is required')
+    .max(50, 'Company name must be less than 50 characters'),
+  applicationLink: z.string()
+    .url('Please enter a valid URL')
+    .min(1, 'Application link is required'),
+  status: z.nativeEnum(JobStatus)
+});
+
+type JobFormData = z.infer<typeof jobSchema>;
 
 interface AddJobFormProps {
   isOpen: boolean;
@@ -11,195 +32,198 @@ interface AddJobFormProps {
 }
 
 export default function AddJobForm({ isOpen, onClose, onJobAdded, editJob }: AddJobFormProps) {
-  const [title, setTitle] = useState('');
-  const [company, setCompany] = useState('');
-  const [applicationLink, setApplicationLink] = useState('');
-  const [status, setStatus] = useState<JobStatus>(JobStatus.APPLIED);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-
-  // Determine if we're in edit mode
   const isEditMode = !!editJob;
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+    setValue
+  } = useForm<JobFormData>({
+    resolver: zodResolver(jobSchema),
+    defaultValues: {
+      title: '',
+      company: '',
+      applicationLink: '',
+      status: JobStatus.APPLIED
+    }
+  });
 
   // Pre-populate form when editing
   useEffect(() => {
     if (editJob) {
-      setTitle(editJob.title);
-      setCompany(editJob.company);
-      setApplicationLink(editJob.applicationLink);
-      setStatus(editJob.status);
+      setValue('title', editJob.title);
+      setValue('company', editJob.company);
+      setValue('applicationLink', editJob.applicationLink);
+      setValue('status', editJob.status);
     } else {
-      //Reset form when adding new job
-      setTitle('');
-      setCompany('');
-      setApplicationLink('');
-      setStatus(JobStatus.APPLIED);
+      reset();
     }
-    setError('');
-  }, [editJob]);
+  }, [editJob, setValue, reset]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!title || !company || !applicationLink) {
-      setError('Please fill in all fields');
-      return;
-    }
-
+  const onSubmit = async (data: JobFormData) => {
     try {
-      setIsSubmitting(true);
-      setError('');
-
-      // Choose API endpoint and method based on mode
       const url = isEditMode ? `/api/jobs/${editJob.id}` : '/api/jobs';
       const method = isEditMode ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
-        method: method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title,
-          company,
-          applicationLink,
-          status,
-        }),
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
       });
 
-      const data = await response.json();
+      const result = await response.json();
 
-      if (data.success) {
-        // Reset form
-        setTitle('');
-        setCompany('');
-        setApplicationLink('');
-        setStatus(JobStatus.APPLIED);
-        
-        // Refresh jobs and close modal
+      if (result.success) {
+        reset();
         onJobAdded();
         onClose();
       } else {
-        setError(data.error || `Failed to ${isEditMode ? 'update' : 'add'} job`);
+        throw new Error(result.error || 'Operation failed');
       }
-    } catch (err) {
-      setError('An error occurred');
-    } finally {
-      setIsSubmitting(false);
+    } catch (error) {
+      console.error('Form submission error:', error);
     }
   };
 
   const handleClose = () => {
-    // Reset form
-    setTitle('');
-    setCompany('');
-    setApplicationLink('');
-    setStatus(JobStatus.APPLIED);
-    setError('');
+    reset();
     onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-900">
-            {isEditMode ? 'Edit Job Application' : 'Add New Job'}
-          </h2>
-          <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            ✕
-          </button>
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        {/* Backdrop */}
+        <div 
+          className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"
+          onClick={handleClose}
+        />
+
+        {/* Modal */}
+        <div className="relative inline-block transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+          {/* Header with gradient */}
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="rounded-lg bg-white/20 p-2">
+                  <Briefcase className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">
+                  {isEditMode ? 'Edit Application' : 'New Application'}
+                </h3>
+              </div>
+              <button
+                onClick={handleClose}
+                className="rounded-lg p-1 text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-6 space-y-6">
+            {/* Job Title */}
+            <div className="space-y-2">
+              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                <Briefcase className="h-4 w-4 text-gray-500" />
+                <span>Job Title</span>
+              </label>
+              <input
+                {...register('title')}
+                type="text"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
+                placeholder="e.g., Senior Frontend Developer"
+              />
+              {errors.title && (
+                <p className="text-sm text-red-600">{errors.title.message}</p>
+              )}
+            </div>
+
+            {/* Company */}
+            <div className="space-y-2">
+              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                <Building className="h-4 w-4 text-gray-500" />
+                <span>Company</span>
+              </label>
+              <input
+                {...register('company')}
+                type="text"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
+                placeholder="e.g., UseAppEasy"
+              />
+              {errors.company && (
+                <p className="text-sm text-red-600">{errors.company.message}</p>
+              )}
+            </div>
+
+            {/* Application Link */}
+            <div className="space-y-2">
+              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                <Link className="h-4 w-4 text-gray-500" />
+                <span>Application Link</span>
+              </label>
+              <input
+                {...register('applicationLink')}
+                type="url"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
+                placeholder="https://company.com/careers/job-id"
+              />
+              {errors.applicationLink && (
+                <p className="text-sm text-red-600">{errors.applicationLink.message}</p>
+              )}
+            </div>
+
+            {/* Status */}
+            <div className="space-y-2">
+              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                <CheckCircle className="h-4 w-4 text-gray-500" />
+                <span>Status</span>
+              </label>
+              <select
+                {...register('status')}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
+              >
+                <option value={JobStatus.APPLIED}>Applied</option>
+                <option value={JobStatus.INTERVIEWING}>Interviewing</option>
+                <option value={JobStatus.OFFER}>Offer</option>
+                <option value={JobStatus.REJECTED}>Rejected</option>
+              </select>
+              {errors.status && (
+                <p className="text-sm text-red-600">{errors.status.message}</p>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex space-x-3 pt-4">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-3 text-sm font-medium text-white hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>{isEditMode ? 'Updating...' : 'Adding...'}</span>
+                  </div>
+                ) : (
+                  <span>{isEditMode ? 'Update Application' : 'Add Application'}</span>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Job Title
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-              placeholder="Software Engineer Intern"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Company
-            </label>
-            <input
-              type="text"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-              placeholder="UseAppEasy"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Application Link
-            </label>
-            <input
-              type="url"
-              value={applicationLink}
-              onChange={(e) => setApplicationLink(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-              placeholder="https://company.com/jobs/123"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as JobStatus)}
-              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            >
-              <option value={JobStatus.APPLIED}>Applied</option>
-              <option value={JobStatus.INTERVIEWING}>Interviewing</option>
-              <option value={JobStatus.OFFER}>Offer</option>
-              <option value={JobStatus.REJECTED}>Rejected</option>
-            </select>
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-            >
-              {isSubmitting
-               ? (isEditMode ? 'Updating...' : 'Adding...')
-               : (isEditMode ? 'Update Job' : 'Add Job')}
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );
