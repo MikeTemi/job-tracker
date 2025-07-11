@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Job, JobStatus } from '@/types/job';
+import AddJobForm from '@/components/AddJobForm';
+
 
 // Status color mapping
 const getStatusColor = (status: JobStatus) => {
@@ -23,6 +25,7 @@ export default function Dashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
 
   // Fetch jobs from the API
   useEffect(() => {
@@ -110,7 +113,9 @@ return (
       {/* Action header - AI*/}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-slate-900">Your Applications</h2>
-        <button className='bg-slate-900 text-white px-6 py-3 rounded-lg hover:bg-slate-800 transition-colors font-medium shadow-sm'>
+        <button
+         onClick={() => setIsAddFormOpen(true)}
+         className='bg-slate-900 text-white px-6 py-3 rounded-lg hover:bg-slate-800 transition-colors font-medium shadow-sm'>
           + Add New Application
         </button>
       </div>
@@ -170,11 +175,21 @@ return (
             <div className="text-slate-400 text-5xl mb-4">📋</div>
             <h3 className="text-xl font-semibold text-slate-900 mb-2">Ready to start your job search?</h3>
             <p className="text-slate-600 mb-6">Add your first job application and take control of your career journey.</p>
-            <button className='bg-slate-900 text-white px-6 py-3 rounded-lg hover:bg-slate-800 transition-colors font-medium'>
+            <button 
+              onClick={() => setIsAddFormOpen(true)}
+              className='bg-slate-900 text-white px-6 py-3 rounded-lg hover:bg-slate-800 transition-colors font-medium'>
               Add Your First Application
             </button>
           </div>
         )}
+
+        
+        {/* Add Job Form Modal */}
+        <AddJobForm
+          isOpen={isAddFormOpen}
+          onClose={() => setIsAddFormOpen(false)}
+          onJobAdded={fetchJobs}
+        />
       </div>
     </div>
   );
