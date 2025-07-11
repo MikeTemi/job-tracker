@@ -50,6 +50,31 @@ export default function Dashboard() {
     }
 };
 
+// Delete job function
+const handleDeleteJob = async (jobId: string, jobTitle: string) => {
+  const confirmed = window.confirm(
+    `Are you sure you want to delee "${jobTitle}"?\n\n This action cannot be undone.`);
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/jobs/${jobId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        //Refresh the jobs list
+        fetchJobs();
+      } else {
+        alert('Failed to delete job: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      alert('An error occured while deleting the job');
+    }
+}
+
 // Calculate statistics
 const stats = {
   total: jobs.length,
@@ -158,7 +183,9 @@ return (
                       <button className='text-slate-600 hover:text-slate-900 text-sm font-medium transition-colors'>
                         Edit
                       </button>
-                      <button className='text-red-600 hover:text-red-700 text-sm font-medium transition-colors'>
+                      <button 
+                      onClick={() => handleDeleteJob(job.id, job.title)}
+                      className='text-red-600 hover:text-red-700 text-sm font-medium transition-colors'>
                         Delete
                       </button>
                     </div>
