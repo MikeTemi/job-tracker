@@ -1,21 +1,42 @@
 'use client';
 
-import { useState } from 'react';
-import { JobStatus } from '@/types/job';
+import { useEffect, useState } from 'react';
+import { JobStatus, Job } from '@/types/job';
 
 interface AddJobFormProps {
   isOpen: boolean;
   onClose: () => void;
   onJobAdded: () => void;
+  editJob?: Job | null;
 }
 
-export default function AddJobForm({ isOpen, onClose, onJobAdded }: AddJobFormProps) {
+export default function AddJobForm({ isOpen, onClose, onJobAdded, editJob }: AddJobFormProps) {
   const [title, setTitle] = useState('');
   const [company, setCompany] = useState('');
   const [applicationLink, setApplicationLink] = useState('');
   const [status, setStatus] = useState<JobStatus>(JobStatus.APPLIED);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Determine if we're in edit mode
+  const isEditMode = !!editJob;
+
+  // Pre-populate form when editing
+  useEffect(() => {
+    if (editJob) {
+      setTitle(editJob.title);
+      setCompany(editJob.company);
+      setApplicationLink(editJob.applicationLink);
+      setStatus(editJob.status);
+    } else {
+      //Reset form when adding new job
+      setTitle('');
+      setCompany('');
+      setApplicationLink('');
+      setStatus(JobStatus.APPLIED);
+    }
+    setError('');
+  }, [editJob]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,8 +50,12 @@ export default function AddJobForm({ isOpen, onClose, onJobAdded }: AddJobFormPr
       setIsSubmitting(true);
       setError('');
 
-      const response = await fetch('/api/jobs', {
-        method: 'POST',
+      // Choose API endpoint and method based on mode
+      const url = isEditMode ? `/api/jobs/${editJob.id}` : '/api/jobs';
+      const method = isEditMode ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -55,7 +80,7 @@ export default function AddJobForm({ isOpen, onClose, onJobAdded }: AddJobFormPr
         onJobAdded();
         onClose();
       } else {
-        setError(data.error || 'Failed to add job');
+        setError(data.error || `Failed to ${isEditMode ? 'update' : 'add'} job`);
       }
     } catch (err) {
       setError('An error occurred');
@@ -64,15 +89,27 @@ export default function AddJobForm({ isOpen, onClose, onJobAdded }: AddJobFormPr
     }
   };
 
+  const handleClose = () => {
+    // Reset form
+    setTitle('');
+    setCompany('');
+    setApplicationLink('');
+    setStatus(JobStatus.APPLIED);
+    setError('');
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-900">Add New Job</h2>
+          <h2 className="text-xl font-bold text-gray-900">
+            {isEditMode ? 'Edit Job Application' : 'Add New Job'}
+          </h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-400 hover:text-gray-600"
           >
             ✕
@@ -94,7 +131,7 @@ export default function AddJobForm({ isOpen, onClose, onJobAdded }: AddJobFormPr
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               placeholder="Software Engineer Intern"
               required
             />
@@ -108,7 +145,7 @@ export default function AddJobForm({ isOpen, onClose, onJobAdded }: AddJobFormPr
               type="text"
               value={company}
               onChange={(e) => setCompany(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               placeholder="UseAppEasy"
               required
             />
@@ -122,7 +159,7 @@ export default function AddJobForm({ isOpen, onClose, onJobAdded }: AddJobFormPr
               type="url"
               value={applicationLink}
               onChange={(e) => setApplicationLink(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               placeholder="https://company.com/jobs/123"
               required
             />
@@ -135,7 +172,7 @@ export default function AddJobForm({ isOpen, onClose, onJobAdded }: AddJobFormPr
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as JobStatus)}
-              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value={JobStatus.APPLIED}>Applied</option>
               <option value={JobStatus.INTERVIEWING}>Interviewing</option>
@@ -157,7 +194,9 @@ export default function AddJobForm({ isOpen, onClose, onJobAdded }: AddJobFormPr
               disabled={isSubmitting}
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
             >
-              {isSubmitting ? 'Adding...' : 'Add Job'}
+              {isSubmitting
+               ? (isEditMode ? 'Updating...' : 'Adding...')
+               : (isEditMode ? 'Update Job' : 'Add Job')}
             </button>
           </div>
         </form>

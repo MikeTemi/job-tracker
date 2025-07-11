@@ -26,6 +26,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
 
   // Fetch jobs from the API
   useEffect(() => {
@@ -74,6 +75,18 @@ const handleDeleteJob = async (jobId: string, jobTitle: string) => {
       alert('An error occured while deleting the job');
     }
 }
+
+// Edit job function
+const handleEditJob = (job: Job) => {
+  setEditingJob(job);
+  setIsAddFormOpen(true);
+};
+
+// Close form and reset edit state
+const handleCloseForm = () => {
+  setIsAddFormOpen(false);
+  setEditingJob(null);
+};
 
 // Calculate statistics
 const stats = {
@@ -180,7 +193,10 @@ return (
                   </td>
                   <td className='px-6 py-4'>
                     <div className="flex space-x-3">
-                      <button className='text-slate-600 hover:text-slate-900 text-sm font-medium transition-colors'>
+                      <button 
+                       onClick={() => handleEditJob(job)}
+                       className='text-slate-600 hover:text-slate-900 text-sm font-medium transition-colors'
+                      >
                         Edit
                       </button>
                       <button 
@@ -214,8 +230,9 @@ return (
         {/* Add Job Form Modal */}
         <AddJobForm
           isOpen={isAddFormOpen}
-          onClose={() => setIsAddFormOpen(false)}
+          onClose={handleCloseForm}
           onJobAdded={fetchJobs}
+          editJob={editingJob}
         />
       </div>
     </div>
