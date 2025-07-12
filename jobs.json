@@ -1,0 +1,44 @@
+{
+  "jobs": [
+    {
+      "id": "1",
+      "title": "Senior Frontend Developer",
+      "company": "UseAppEasy",
+      "applicationLink": "https://useappeasy.com/careers/frontend-dev",
+      "status": "Applied",
+      "dateApplied": "2024-07-10T10:00:00.000Z"
+    },
+    {
+      "id": "2",
+      "title": "Full Stack Engineer",
+      "company": "TechCorp",
+      "applicationLink": "https://techcorp.com/jobs/fullstack",
+      "status": "Interviewing",
+      "dateApplied": "2024-07-08T14:30:00.000Z"
+    },
+    {
+      "id": "3",
+      "title": "React Developer",
+      "company": "StartupXYZ",
+      "applicationLink": "https://startupxyz.com/careers/react-dev",
+      "status": "Offer",
+      "dateApplied": "2024-07-05T09:15:00.000Z"
+    },
+    {
+      "id": "4",
+      "title": "Software Engineer Intern",
+      "company": "BigTech Inc",
+      "applicationLink": "https://bigtech.com/internships/swe",
+      "status": "Rejected",
+      "dateApplied": "2024-07-01T16:45:00.000Z"
+    },
+    {
+      "id": "5",
+      "title": "Backend Developer",
+      "company": "CloudSolutions",
+      "applicationLink": "https://cloudsolutions.com/jobs/backend",
+      "status": "Applied",
+      "dateApplied": "2024-07-12T11:20:00.000Z"
+    }
+  ]
+}
