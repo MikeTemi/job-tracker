@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Search, Filter, Plus, Edit, Trash2, ExternalLink, Calendar, Building, User } from 'lucide-react';
 import { Job, JobStatus } from '@/types/job';
 import AddJobForm from '@/components/AddJobForm';
+import JobCharts from '@/components/JobCharts';
 
 export default function Dashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -223,6 +224,9 @@ const fetchJobs = async () => {
             </div>
           </div>
         </div>
+
+        {/* Beautiful Charts */}
+        <JobCharts jobs={jobs} />
 
         {/* Search and Filters */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 mb-6">
