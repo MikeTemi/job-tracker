@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, Plus, Edit, Trash2, ExternalLink, Calendar, Building, User } from 'lucide-react';
+import { Search, Filter, Plus, Edit, Trash2, ExternalLink, Calendar, Building, User, Brain } from 'lucide-react';
 import { Job, JobStatus } from '@/types/job';
 import AddJobForm from '@/components/AddJobForm';
 import JobCharts from '@/components/JobCharts';
+import AIAnalysis from '@/components/AIAnalysis';
 
 export default function Dashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -13,6 +14,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [aiAnalysisJob, setAiAnalysisJob] = useState<Job | null>(null);
   
   // New state for search and filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -319,6 +321,13 @@ const fetchJobs = async () => {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => setAiAnalysisJob(job)}
+                              className="text-purple-600 hover:text-purple-700 transition-colors"
+                              title="AI Analysis"
+                            >
+                              <Brain className="h-4 w-4" />
+                            </button>
                             <a
                               href={job.applicationLink}
                               target="_blank"
@@ -397,6 +406,15 @@ const fetchJobs = async () => {
           onJobAdded={fetchJobs}
           editJob={editingJob}
         />
+
+        {/* AI Analysis Modal */}
+        {aiAnalysisJob && (
+          <AIAnalysis
+            job={aiAnalysisJob}
+            isOpen={!!aiAnalysisJob}
+            onClose={() => setAiAnalysisJob(null)}
+          />
+        )}
       </div>
     </div>
   );
