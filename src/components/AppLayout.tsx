@@ -15,9 +15,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const navItems = [
     { name: 'Dashboard', href: '/' },
     { name: 'Applications', href: '/applications' },
-    { name: 'Analytics', href: '/analytics' }, // ✅ Enabled analytics!
-    { name: 'AI Insights', href: '/ai-insights', disabled: true },
-    { name: 'Timeline', href: '/timeline', disabled: true },
+    { name: 'Analytics', href: '/analytics' },
+    { name: 'Timeline', href: '/timeline' }, // ✅ Enabled timeline!
+    { name: 'AI Insights', href: '/ai-insights' },
     { name: 'Settings', href: '/settings', disabled: true },
   ];
 
