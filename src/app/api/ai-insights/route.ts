@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 // Generate prompt that users can copy to any AI service
 function generateCopyablePrompt(jobs: any[], analysisType: string = 'comprehensive') {
   const jobSummary = jobs.map(job => ({
@@ -100,10 +96,15 @@ export async function POST(request: Request) {
     // Generate the copyable prompt with analysis type
     const copyablePrompt = generateCopyablePrompt(jobs, analysisType);
 
-    // Try OpenAI if API key exists and credits available
+    // Try OpenAI only if API key exists - DON'T initialize at build time
     if (process.env.OPENAI_API_KEY) {
       try {
         console.log('Attempting OpenAI request for analysis type:', analysisType);
+
+        // Initialize OpenAI client here, not at module level
+        const openai = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY,
+        });
 
         const completion = await openai.chat.completions.create({
           model: "gpt-3.5-turbo",
