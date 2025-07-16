@@ -5,77 +5,8 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export async function POST(request: Request) {
-  try {
-    const { jobs, analysisType = 'overview' } = await request.json();
-
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({
-        success: false,
-        error: 'OpenAI API key not configured'
-      });
-    }
-
-    if (!jobs || jobs.length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'No jobs data provided'
-      });
-    }
-
-    let prompt = '';
-    
-    switch (analysisType) {
-      case 'overview':
-        prompt = createOverviewPrompt(jobs);
-        break;
-      case 'patterns':
-        prompt = createPatternsPrompt(jobs);
-        break;
-      case 'recommendations':
-        prompt = createRecommendationsPrompt(jobs);
-        break;
-      case 'market':
-        prompt = createMarketPrompt(jobs);
-        break;
-      default:
-        prompt = createOverviewPrompt(jobs);
-    }
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // More cost-effective than GPT-4
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert career advisor and data analyst specializing in job search optimization. Provide actionable, specific insights based on job application data."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      max_tokens: 1000,
-      temperature: 0.7,
-    });
-
-    const analysis = completion.choices[0]?.message?.content || 'Unable to generate analysis';
-
-    return NextResponse.json({
-      success: true,
-      analysis: analysis,
-      tokensUsed: completion.usage?.total_tokens || 0
-    });
-
-  } catch (error: any) {
-    console.error('OpenAI API error:', error);
-    return NextResponse.json({
-      success: false,
-      error: error.message || 'Failed to generate AI insights'
-    });
-  }
-}
-
-function createOverviewPrompt(jobs: any[]) {
+// Generate prompt that users can copy to any AI service
+function generateCopyablePrompt(jobs: any[], analysisType: string = 'comprehensive') {
   const jobSummary = jobs.map(job => ({
     title: job.title,
     company: job.company,
@@ -84,84 +15,158 @@ function createOverviewPrompt(jobs: any[]) {
     location: job.location || 'Not specified'
   }));
 
-  return `
-Analyze this job application data and provide insights:
+  // Different prompts based on analysis type
+  let specificPrompt = '';
+  
+  if (analysisType === 'job-analysis') {
+    specificPrompt = `
+**Focus specifically on JOB ANALYSIS for this role:**
+- Analyze the job title and company fit
+- Assess market demand for this role
+- Evaluate career growth potential
+- Compare salary expectations vs market rate
+- Identify key skills/requirements for success
+    `;
+  } else if (analysisType === 'application-status') {
+    specificPrompt = `
+**Focus specifically on APPLICATION STATUS & NEXT STEPS:**
+- Analyze current application status and timeline
+- Recommend specific follow-up actions
+- Suggest optimal timing for follow-ups
+- Provide interview preparation if applicable
+- Identify potential concerns or red flags
+    `;
+  } else if (analysisType === 'interview-preparation') {
+    specificPrompt = `
+**Focus specifically on INTERVIEW PREPARATION:**
+- Research the company culture and values
+- Predict likely interview questions for this role
+- Suggest specific examples/stories to prepare
+- Recommend questions to ask the interviewer
+- Provide salary negotiation strategies
+    `;
+  } else {
+    specificPrompt = `
+**Provide COMPREHENSIVE ANALYSIS covering:**
+- Overall application strategy assessment
+- Success rate and conversion analysis
+- Pattern recognition and optimization opportunities
+- Strategic recommendations for improvement
+    `;
+  }
+
+  return `Act as an expert career advisor and data analyst specializing in job search optimization.
+
+${jobs.length === 1 ? 
+  `Analyze this specific job application:` : 
+  `Analyze these ${jobs.length} job applications:`
+}
 
 ${JSON.stringify(jobSummary, null, 2)}
 
-Please provide:
-1. **Success Rate Analysis**: Calculate and interpret conversion rates
-2. **Application Patterns**: Identify trends in timing, companies, roles
-3. **Optimization Opportunities**: Specific areas for improvement
-4. **Market Position**: Assessment of competitiveness
+${specificPrompt}
 
-Keep insights actionable and specific. Use emojis for visual appeal.
-  `;
+**📊 PERFORMANCE ANALYSIS**
+- Current status assessment and timeline evaluation
+- Market positioning and competitive analysis
+- Success probability and optimization opportunities
+
+**💡 STRATEGIC RECOMMENDATIONS**  
+- Specific, actionable next steps
+- Timeline for implementation
+- Key success metrics to track
+
+**🚀 IMMEDIATE ACTION ITEMS**
+- 3-5 concrete tasks to complete this week
+- Follow-up strategy and timing
+- Application optimization suggestions
+
+Keep the tone professional but encouraging. Use emojis for visual appeal and structure. Be specific and actionable with all recommendations. ${jobs.length === 1 ? 'Focus on this single application.' : 'Focus on patterns across applications.'}`;
 }
 
-function createPatternsPrompt(jobs: any[]) {
-  return `
-Analyze these job applications for patterns and trends:
+export async function POST(request: Request) {
+  try {
+    const { jobs, analysisType = 'comprehensive' } = await request.json();
 
-${JSON.stringify(jobs.map(job => ({
-  title: job.title,
-  company: job.company,
-  status: job.status,
-  dateApplied: job.dateApplied,
-  location: job.location
-})), null, 2)}
+    console.log('API received:', { jobCount: jobs?.length, analysisType });
 
-Focus on:
-1. **Industry/Role Patterns**: What types of positions are most successful?
-2. **Timing Patterns**: Best days/times for applications
-3. **Company Size/Type**: Which company types respond best?
-4. **Geographic Patterns**: Location-based success rates
-5. **Status Progression**: How quickly do applications move through stages?
+    if (!jobs || jobs.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'No jobs data provided'
+      });
+    }
 
-Provide specific, actionable insights with concrete recommendations.
-  `;
-}
+    // Generate the copyable prompt with analysis type
+    const copyablePrompt = generateCopyablePrompt(jobs, analysisType);
 
-function createRecommendationsPrompt(jobs: any[]) {
-  return `
-Based on this job application history, provide strategic recommendations:
+    // Try OpenAI if API key exists and credits available
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        console.log('Attempting OpenAI request for analysis type:', analysisType);
 
-${JSON.stringify(jobs.map(job => ({
-  title: job.title,
-  company: job.company,
-  status: job.status,
-  dateApplied: job.dateApplied
-})), null, 2)}
+        const completion = await openai.chat.completions.create({
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert career advisor specializing in job search optimization. Provide actionable, encouraging insights based on application data."
+            },
+            {
+              role: "user",
+              content: copyablePrompt
+            }
+          ],
+          max_tokens: 1200,
+          temperature: 0.7,
+        });
 
-Provide recommendations for:
-1. **Target Companies**: Similar companies to apply to
-2. **Role Optimization**: Adjustments to job search criteria
-3. **Application Strategy**: Timing, frequency, approach improvements
-4. **Follow-up Strategy**: When and how to follow up
-5. **Skill Development**: Skills to highlight or develop
+        const analysis = completion.choices[0]?.message?.content || 'Unable to generate analysis';
 
-Make recommendations specific and actionable with clear next steps.
-  `;
-}
+        console.log('OpenAI success, returning analysis');
 
-function createMarketPrompt(jobs: any[]) {
-  const industries = [...new Set(jobs.map(job => job.title))];
-  const companies = [...new Set(jobs.map(job => job.company))];
-  
-  return `
-Analyze market trends based on this job search data:
+        return NextResponse.json({
+          success: true,
+          analysis: analysis,
+          tokensUsed: completion.usage?.total_tokens || 0,
+          mode: 'ai',
+          copyablePrompt: copyablePrompt
+        });
 
-Industries/Roles: ${industries.join(', ')}
-Companies: ${companies.join(', ')}
-Application Timeline: ${jobs.length} applications over time
+      } catch (openaiError: any) {
+        console.error('OpenAI API error:', openaiError);
+        
+        // Return prompt for manual use when OpenAI fails
+        return NextResponse.json({
+          success: true,
+          mode: 'prompt',
+          copyablePrompt: copyablePrompt,
+          error: `OpenAI unavailable (${openaiError.code || 'quota exceeded'}). Use the prompt below with any AI service.`,
+          suggestions: [
+            'Copy the prompt to ChatGPT (chat.openai.com)',
+            'Try Claude (claude.ai)',
+            'Use Google Bard (bard.google.com)',
+            'Or any other AI assistant'
+          ]
+        });
+      }
+    } else {
+      console.log('No OpenAI API key, returning prompt mode');
+      // No API key configured
+      return NextResponse.json({
+        success: true,
+        mode: 'prompt',
+        copyablePrompt: copyablePrompt,
+        message: 'No OpenAI API key configured. Use the prompt below with any AI service.'
+      });
+    }
 
-Provide insights on:
-1. **Market Demand**: Current demand for these roles
-2. **Competitive Landscape**: How competitive these positions are
-3. **Salary Expectations**: Expected salary ranges for these roles
-4. **Growth Opportunities**: Career progression paths
-5. **Market Timing**: Best times to apply in this market
-
-Focus on current 2024 job market trends and data.
-  `;
+  } catch (error: any) {
+    console.error('General API error:', error);
+    
+    return NextResponse.json({
+      success: false,
+      error: error.message || 'Failed to generate insights'
+    });
+  }
 }

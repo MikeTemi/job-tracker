@@ -12,6 +12,8 @@ export default function AIInsightsPage() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSelection, setShowSelection] = useState(false);
+  const [copyablePrompt, setCopyablePrompt] = useState<string>('');
+  const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
     fetchJobs();
@@ -72,6 +74,8 @@ export default function AIInsightsPage() {
     setError(null);
     
     try {
+      console.log('Sending request to AI API...');
+      
       const response = await fetch('/api/ai-insights', {
         method: 'POST',
         headers: {
@@ -83,18 +87,56 @@ export default function AIInsightsPage() {
         }),
       });
 
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('API Response:', data);
 
       if (data.success) {
-        setInsight(data.analysis);
-        setShowSelection(false); // Hide selection after generating
+        if (data.mode === 'ai') {
+          // AI analysis successful
+          setInsight(data.analysis);
+          setShowSelection(false);
+          setShowPrompt(false);
+        } else if (data.mode === 'prompt') {
+          // Show copyable prompt
+          setCopyablePrompt(data.copyablePrompt);
+          setShowPrompt(true);
+          setShowSelection(false);
+          if (data.error) {
+            setError(data.error);
+          }
+        }
       } else {
         setError(data.error || 'Failed to generate insight');
       }
-    } catch (err) {
-      setError('Failed to connect to AI service');
+    } catch (err: any) {
+      console.error('Fetch error:', err);
+      setError(`Failed to connect to AI service: ${err.message}`);
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const copyPromptToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(copyablePrompt);
+      alert('Prompt copied to clipboard! 📋');
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = copyablePrompt;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert('Prompt copied to clipboard! 📋');
     }
   };
 
@@ -337,6 +379,7 @@ export default function AIInsightsPage() {
                 <button
                   onClick={() => {
                     setInsight('');
+                    setShowPrompt(false);  // ✅ ADD THIS LINE
                     setShowSelection(true);
                   }}
                   className="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-200 transition-colors flex items-center space-x-2"
@@ -369,6 +412,118 @@ export default function AIInsightsPage() {
                     Analyze different applications
                   </button>
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* Prompt Copying Section */}
+          {showPrompt && (
+            <div className="p-8">
+              <div className="mb-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full p-3">
+                    <Brain className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-slate-900">Copy & Paste Prompt</h3>
+                    <p className="text-slate-600">Use this prompt with any AI service for free analysis</p>
+                  </div>
+                </div>
+                
+                {error && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                    <p className="text-amber-800 text-sm">{error}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* AI Service Suggestions */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <a
+                  href="https://chat.openai.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-green-50 border border-green-200 rounded-lg p-4 text-center hover:bg-green-100 transition-colors"
+                >
+                  <div className="font-semibold text-green-900">ChatGPT</div>
+                  <div className="text-green-700 text-sm">Free tier available</div>
+                </a>
+                <a
+                  href="https://claude.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center hover:bg-blue-100 transition-colors"
+                >
+                  <div className="font-semibold text-blue-900">Claude</div>
+                  <div className="text-blue-700 text-sm">Free conversations</div>
+                </a>
+                <a
+                  href="https://bard.google.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center hover:bg-purple-100 transition-colors"
+                >
+                  <div className="font-semibold text-purple-900">Google Bard</div>
+                  <div className="text-purple-700 text-sm">Completely free</div>
+                </a>
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center">
+                  <div className="font-semibold text-slate-900">Any AI</div>
+                  <div className="text-slate-700 text-sm">Copy & paste</div>
+                </div>
+              </div>
+
+              {/* Copyable Prompt */}
+              <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden">
+                <div className="bg-slate-100 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-slate-700 font-medium">AI Prompt</span>
+                    <span className="bg-slate-200 text-slate-600 px-2 py-1 rounded text-xs">
+                      {selectedJobs.size} applications
+                    </span>
+                  </div>
+                  <button
+                    onClick={copyPromptToClipboard}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 text-sm"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span>Copy Prompt</span>
+                  </button>
+                </div>
+                
+                <div className="p-6">
+                  <pre className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-mono bg-white rounded-lg p-4 border border-slate-200 max-h-96 overflow-y-auto">
+{copyablePrompt}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-6">
+                <h4 className="font-semibold text-blue-900 mb-3">🚀 How to Use:</h4>
+                <ol className="text-blue-800 text-sm space-y-2">
+                  <li><strong>1.</strong> Click "Copy Prompt" above</li>
+                  <li><strong>2.</strong> Choose any AI service (ChatGPT, Claude, Bard, etc.)</li>
+                  <li><strong>3.</strong> Paste the prompt and get your analysis!</li>
+                  <li><strong>4.</strong> Come back and try our AI again when credits are available</li>
+                </ol>
+              </div>
+
+              {/* Footer */}
+              <div className="mt-6 flex justify-between items-center">
+                <button
+                  onClick={() => {
+                    setShowPrompt(false);
+                    setShowSelection(true);
+                  }}
+                  className="text-slate-600 hover:text-slate-700 px-4 py-2"
+                >
+                  ← Back to Selection
+                </button>
+                <div className="text-sm text-slate-500">
+                  Free alternative to AI analysis
+                </div>
               </div>
             </div>
           )}

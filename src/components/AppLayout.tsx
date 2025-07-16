@@ -16,9 +16,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
     { name: 'Dashboard', href: '/' },
     { name: 'Applications', href: '/applications' },
     { name: 'Analytics', href: '/analytics' },
-    { name: 'Timeline', href: '/timeline' }, // ✅ Enabled timeline!
+    { name: 'Timeline', href: '/timeline' },
     { name: 'AI Insights', href: '/ai-insights' },
-    { name: 'Settings', href: '/settings', disabled: true },
+    { name: 'Settings', href: '/settings' },
   ];
 
   return (
@@ -64,22 +64,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
             return (
               <Link
                 key={item.name}
-                href={item.disabled ? '#' : item.href}
+                href={item.href}
                 className={`
                   block px-4 py-3 rounded-lg transition-all duration-200 font-medium
                   ${isActive 
                     ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md' 
-                    : item.disabled
-                      ? 'text-gray-400 cursor-not-allowed'
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                   }
                 `}
                 onClick={(e) => {
-                  if (item.disabled) {
-                    e.preventDefault();
-                  } else {
-                    setSidebarOpen(false); // Close sidebar on mobile after click
-                  }
+                  setSidebarOpen(false); // Close sidebar on mobile after click
                 }}
               >
                 <div className="flex items-center justify-between">
@@ -95,12 +89,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </span>
                     <span>{item.name}</span>
                   </div>
-                  {item.disabled && (
-                    <span className="text-xs bg-gray-200 text-gray-500 px-2 py-1 rounded-full">
-                      Soon
-                    </span>
-                  )}
-                  {item.name === 'Analytics' && !item.disabled && !isActive && (
+                  {item.name === 'Analytics' && !isActive && (
                     <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full font-medium">
                       New!
                     </span>
