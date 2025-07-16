@@ -72,7 +72,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                   }
                 `}
-                onClick={(e) => {
+                onClick={() => {
                   setSidebarOpen(false); // Close sidebar on mobile after click
                 }}
               >

@@ -81,6 +81,10 @@ export default function JobCharts({ jobs }: JobChartsProps) {
         return null;
     };
     
+    const formatTooltipValue = (value: number | string, name: string) => {
+        return `${name}: ${value}`;
+    };
+    
     if (jobs.length === 0) {
         return (
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-8 text-center">
